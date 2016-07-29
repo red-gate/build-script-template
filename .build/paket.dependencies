@@ -1,0 +1,16 @@
+source https://nuget.org/api/v2
+source http://TODO:_internal_nuget_server_hostname/api/v2
+source http://TODO:teamcity_server_hostname/guestAuth/app/nuget/v1/FeedService.svc/
+
+# You'll probably need nuget.exe in order to `nuget restore`, `nuget pack` and `nuget push`
+nuget Nuget.CommandLine ~> 3.4.0
+
+# https://github.com/nightroman/Invoke-Build
+# https://github.com/nightroman/Invoke-Build/wiki/Script-Tutorial
+nuget Invoke-Build ~> 2.14.7
+
+# Contains useful helper functions for powershell build scripts
+nuget RedGate.Build ~> 0.1.207
+
+# Contains useful helper functions to build installers
+nuget RedGate.Build.Installer ~> 1.0.23
