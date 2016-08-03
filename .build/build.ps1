@@ -105,9 +105,30 @@ task Compile Init, UpdateVersionInfo, {
     }
 }
 
-# Synopsis: Sign all the RedGate assemblies
-task SignAssemblies -If($Configuration -eq 'Release') {
+# Synopsis: Run SmartAssembly on files that have saproj files for them
+task SmartAssembly -If ($Configuration -eq 'Release') {
+    throw 'TODO: use Invoke-SmartAssembly from the RedGate.Build module'
+    # Get-Item "$RootDir\MSBuild\sa\*.saproj" | ForEach {
+    #     $saInput = "$RootDir\Build\Release\$($_.BaseName)" | Resolve-Path
+    #     $saOutput = "$RootDir\Build\Obfuscated\$($_.BaseName)"
+    #     Invoke-SmartAssembly `
+    #         -ProjectPath $_.FullName `
+    #         -InputFilename $saInput `
+    #         -OutputFilename $saOutput
+    # }
+}
+
+# Synopsis: Sign all the RedGate assemblies (Release and Obfuscated)
+task SignAssemblies -If ($Configuration -eq 'Release' -and $SigningServiceUrl -ne $null) {
     throw 'TODO: use Invoke-SigningService from the RedGate.Build module'
+    # For example:
+    # Get-Item -Path "$RootDir\Build\Release\*.*" `
+    #     -Include 'Redgate*.dll', 'Redgate*.exe' `
+    #     | Invoke-SigningService -SigningServiceUrl $SigningServiceUrl -Verbose
+    #     
+    # Get-Item -Path "$RootDir\Build\Obfuscated\*.*" `
+    #     -Include 'Redgate*.dll', 'Redgate*.exe' `
+    #     | Invoke-SigningService -SigningServiceUrl $SigningServiceUrl -Verbose        
 }
 
 # Synopsis: Execute our unit tests
@@ -133,18 +154,16 @@ task BuildNugetPackages Init, UpdateNuspecVersionInfo, {
 
 # Synopsis: Publish the nuget packages (Teamcity only)
 task PublishNugetPackages -If($PublishNugetPackages) {
-
   assert ($NugetFeedUrl -ne $null) '$NugetFeedUrl is missing. Cannot publish nuget packages'
   assert ($NugetFeedApiKey -ne $null) '$NugetFeedApiKey is missing. Cannot publish nuget packages'
 
   Get-ChildItem $NugetPackageOutputDir -Filter "*.nupkg" | ForEach {
     & $NugetExe push $_.FullName -Source $NugetFeedUrl -ApiKey $NugetFeedApiKey
   }
-
 }
 
 # Synopsis: Build the project.
-task Build Init, Compile, SignAssemblies, BuildNugetPackages, UnitTests, PublishNugetPackages
+task Build Init, Compile, SmartAssembly, SignAssemblies, BuildNugetPackages, UnitTests, PublishNugetPackages
 
 # Synopsis: By default, Call the 'Build' task
 task . Build
