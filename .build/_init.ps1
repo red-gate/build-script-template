@@ -71,7 +71,10 @@ function global:Build {
     {
       # Import the RedGate.Build module.
       Import-Module '.\packages\RedGate.Build\tools\RedGate.Build.psm1' -Force -DisableNameChecking
-
+      
+      # If building installers you need the RedGate.Build.Installers module too
+      Import-Module ".\packages\RedGate.Build.Installer\tools\RedGate.Build.Installer.psm1" -Force -DisableNameChecking
+      
       # Call the actual build script
       & '.\packages\Invoke-Build\tools\Invoke-Build.ps1' `
         -File .\build.ps1 `
@@ -80,7 +83,6 @@ function global:Build {
         -IsDefaultBranch $IsDefaultBranch `
         -NugetFeedUrl $NugetFeedUrl `
         -NugetFeedApiKey $NugetFeedApiKey
-
     }
     finally
     {
@@ -90,8 +92,5 @@ function global:Build {
 
 Write-Host "This is the <amazing-product> repo. And here are the available commands:" -Fore Magenta
 Write-Host "`t build" -Fore Green
-Write-Host "`t test" -Fore Green
-Write-Host "`t release" -Fore Green
-Write-Host "`t setup" -Fore Green
-Write-Host "`t update-dependencies" -Fore Green
+Write-Host "`t installer" -Fore Green
 Write-Host "For more info, use help <command-name>" -Fore Magenta
