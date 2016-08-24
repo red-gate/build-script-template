@@ -26,22 +26,89 @@ task CreateFolders {
     New-Item $NugetPackageOutputDir -ItemType Directory -Force | Out-Null
 }
 
-# Synopsis: Compute the value of the version info. (Save it in $script:Version for other tasks to use)
-task GenerateVersionNumber {
-  # For dev builds, version suffix is always 0
-  $versionSuffix = 0
-  if($env:BUILD_NUMBER) {
-    $versionSuffix = $env:BUILD_NUMBER
-  }
 
-  $script:Version = [System.Version] "$(Get-Content version.txt).$versionSuffix"
+# Retrieves the first Major.Minor line in $RootDir\RELEASENOTES.md as the $Version, appends
+# all subsequent lines in the file as $Content.
+function Get-ReleaseNotes {
+    $ReleaseNotesPath = "$RootDir\RELEASENOTES.md" | Resolve-Path
+    $Lines = [System.IO.File]::ReadAllLines($ReleaseNotesPath, [System.Text.Encoding]::UTF8)
+    $Result = @()
+    $Version = $Null
+    $Lines | ForEach-Object {
+        $Line = $_.Trim()
+        if (-not $Version) {
+            $Match = [regex]::Match($Line, '[0-9]+\.[0-9]+')
+            if ($Match.Success) {
+                $Version = $Match.Value
+            }
+        }
+        if ($Version) {
+            $Result += $Line
+        }
+    }
+    if (-not $Version) {
+        throw "Failed to parse release notes: $ReleaseNotesPath"
+    }
+    return @{
+        Content = $Result -join [System.Environment]::NewLine
+        Version = [version] $Version
+    }
+}
 
-  TeamCity-SetBuildNumber $script:Version
+# Synopsis: Retrieve two part semantic version information and release notes from $RootDir\RELEASENOTES.md
+# $script:AssemblyVersion = Major.0.0.0
+# $script:AssemblyFileVersion = Major.Minor.$VersionSuffix.0
+# $script:NugetPackageVersion = Major.Minor.$VersionSuffix or Major.Minor.$VersionSuffix-branch
+# $script:ReleaseNotes = read from RELEASENOTES.md
+function GenerateSemVerInformationFromReleaseNotesMd([int] $VersionSuffix) {
+    $Notes = Get-ReleaseNotes
+    $script:SemanticVersion = [System.Version] "$($Notes.Version).$VersionSuffix"
+    $script:ReleaseNotes = [string] $Notes.Content
 
-  $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:Version -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+    # Establish assembly version number
+    $script:AssemblyVersion = [version] "$($script:SemanticVersion.Major).0.0.0"
+    $script:AssemblyFileVersion = [version] "$script:SemanticVersion.0"
 
-  "Version number is $script:Version"
-  "Nuget packages Version number is $script:NugetPackageVersion"
+    $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:SemanticVersion -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+}
+
+# Synopsis: Retrieve three part version information from .build\version.txt
+# $script:AssemblyVersion = Major.Minor.Build.$VersionSuffix
+# $script:AssemblyFileVersion = Major.Minor.Build.$VersionSuffix
+# $script:ReleaseNotes = ''
+# $script:NugetPackageVersion = $script:SemanticVersion or $script:SemanticVersion-branch
+function GetVersionInformationFromVersionTxt([int] $VersionSuffix) {
+    $script:AssemblyVersion = [System.Version] "$(Get-Content version.txt).$VersionSuffix"
+    $script:AssemblyFileVersion = $script:AssemblyVersion
+    $script:ReleaseNotes = ''
+
+    $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:AssemblyVersion -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+}
+
+# Ensure the following are set
+# $script:AssemblyVersion
+# $script:AssemblyFileVersion
+# $script:ReleaseNotes
+# $script:NugetPackageVersion
+task GenerateVersionInformation {
+    "Retrieving version information"
+    
+    # For dev builds, version suffix is always 0
+    $versionSuffix = 0
+    if($env:BUILD_NUMBER) {
+        $versionSuffix = $env:BUILD_NUMBER
+    }
+  
+    throw 'TODO: Either rely on GetVersionInformationFromVersionTxt or GenerateSemVerInformationFromReleaseNotesMd - the latter is normal for libraries'
+    # GetVersionInformationFromVersionTxt($versionSuffix)
+    # GenerateSemVerInformationFromReleaseNotesMd($versionSuffix)
+    
+    TeamCity-SetBuildNumber $script:Version
+    
+    "AssemblyVersion = $script:AssemblyVersion"
+    "AssemblyFileVersion = $script:AssemblyFileVersion"
+    "NugetPackageVersion = $script:NugetPackageVersion"
+    "ReleaseNotes = $script:ReleaseNotes"
 }
 
 # Synopsis: Restore the nuget packages of the Visual Studio solution
@@ -59,17 +126,16 @@ task UpdateNugetPackages RestoreNugetPackages, {
 }
 
 # Synopsis: Update the version info in all AssemblyInfo.cs
-task UpdateVersionInfo GenerateVersionNumber, {
-
-    "Updating Version Info to $Version"
+task UpdateVersionInfo GenerateVersionInformation, {
+	throw 'TODO: Either rely on GenerateVersionNumber or GenerateSemVerInformation - the latter is normal for libraries'
+    "Updating assembly information"
 
     # Ignore anything under the Testing/ folder
     @(Get-ChildItem "$RootDir" AssemblyInfo.cs -Recurse) | where { $_.FullName -notlike "$RootDir\Testing\*" } | ForEach {
-
-        (Get-Content $_.FullName) `
-            -replace 'AssemblyVersion\("\d+\.\d+\.\d+\.\d+"\)', "AssemblyVersion(""$Version"")" `
-            -replace 'AssemblyFileVersion\("\d+\.\d+\.\d+\.\d+"\)', "AssemblyFileVersion(""$Version"")" `
-            | Out-File $_.FullName -Encoding utf8
+        Update-AssemblyVersion $_.FullName `
+            -Version $script:AssemblyVersion `
+            -FileVersion $script:AssemblyFileVersion `
+            -InformationalVersion $script:NuGetPackageVersion
     }
 }
 
@@ -85,7 +151,7 @@ task UpdateNuspecVersionInfo {
 }
 
 # Synopsis: A task that makes sure our initialization tasks have been run before we can do anything useful
-task Init CreateFolders, RestoreNugetPackages, GenerateVersionNumber
+task Init CreateFolders, RestoreNugetPackages, GenerateVersionInformation
 
 # Synopsis: Compile the Visual Studio solution
 task Compile Init, UpdateVersionInfo, {
@@ -159,6 +225,7 @@ task BuildNugetPackages Init, UpdateNuspecVersionInfo, {
                 -version $NugetPackageVersion `
                 -OutputDirectory $NugetPackageOutputDir `
                 -BasePath $RootDir `
+                -Properties "releaseNotes=$ReleaseNotes" `
                 -NoPackageAnalysis
         }
     }
