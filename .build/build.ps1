@@ -127,9 +127,6 @@ task UpdateNugetPackages RestoreNugetPackages, {
 
 # Synopsis: Update the version info in all AssemblyInfo.cs
 task UpdateVersionInfo GenerateVersionInformation, {
-	throw 'TODO: Either rely on GenerateVersionNumber or GenerateSemVerInformation - the latter is normal for libraries'
-    "Updating assembly information"
-
     # Ignore anything under the Testing/ folder
     @(Get-ChildItem "$RootDir" AssemblyInfo.cs -Recurse) | where { $_.FullName -notlike "$RootDir\Testing\*" } | ForEach {
         Update-AssemblyVersion $_.FullName `
