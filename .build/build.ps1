@@ -75,8 +75,11 @@ task UpdateVersionInfo GenerateVersionNumber, {
 
 # Synopsis: Update the nuspec dependencies versions based on the versions of the nuget packages that are being used
 task UpdateNuspecVersionInfo {
-    # Get the list of packages.config we use from packages\repository.config
-    $packageConfigs = ([xml](Get-Content $RootDir\packages\repositories.config)).repositories.repository.path -replace '\.\.', "$RootDir"
+    # Find all the packages.config
+    $packageConfigs = Get-ChildItem "$RootDir" -Recurse -Filter "packages.config" `
+                      | ?{ $_.fullname -notmatch "\\(.build)|(packages)\\" } `
+                      | Resolve-Path
+
     # Update dependency verions in each of our .nuspec file based on what is in our packages.config
     Resolve-Path "$RootDir\Nuspec\*.nuspec" | Update-NuspecDependenciesVersions -PackagesConfigPaths $packageConfigs -verbose
 }
