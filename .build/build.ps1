@@ -137,7 +137,16 @@ task SignAssemblies -If ($Configuration -eq 'Release' -and $SigningServiceUrl -n
 
 # Synopsis: Execute our unit tests
 task UnitTests {
-    throw 'TODO: use Invoke-NUnitForAssembly from the RedGate.Build module'
+    throw 'TODO: use Invoke-NUnitForAssembly and Merge-CoverageReports from the RedGate.Build module'
+    # For example:
+    # Invoke-NUnitForAssembly `
+    #     -AssemblyPath "$RootDir\Build\Release\RedGate.Tests.dll" `
+    #     -NUnitVersion "2.6.4" `
+    #     -FrameworkVersion "net-4.0" `
+    #     -EnableCodeCoverage $true `
+    # 
+    # Merge-CoverageReports `
+    #     -SnapshotsDir "$RootDir\Build\Release"
 }
 
 # Synopsis: Build the nuget packages.
