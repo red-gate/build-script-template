@@ -26,7 +26,7 @@ task CreateFolders {
     New-Item $NugetPackageOutputDir -ItemType Directory -Force | Out-Null
 }
 
-# Synopsis: Compute the value of the version info of SQL Source Control. (Save it in $script:Version for other tasks to use)
+# Synopsis: Compute the value of the version info. (Save it in $script:Version for other tasks to use)
 task GenerateVersionNumber {
   # For dev builds, version suffix is always 0
   $versionSuffix = 0
