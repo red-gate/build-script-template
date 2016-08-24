@@ -26,7 +26,6 @@ task CreateFolders {
     New-Item $NugetPackageOutputDir -ItemType Directory -Force | Out-Null
 }
 
-
 # Retrieves the first Major.Minor line in $RootDir\RELEASENOTES.md as the $Version, appends
 # all subsequent lines in the file as $Content.
 function Get-ReleaseNotes {
@@ -127,6 +126,8 @@ task UpdateNugetPackages RestoreNugetPackages, {
 
 # Synopsis: Update the version info in all AssemblyInfo.cs
 task UpdateVersionInfo GenerateVersionInformation, {
+    "Updating assembly information"
+
     # Ignore anything under the Testing/ folder
     @(Get-ChildItem "$RootDir" AssemblyInfo.cs -Recurse) | where { $_.FullName -notlike "$RootDir\Testing\*" } | ForEach {
         Update-AssemblyVersion $_.FullName `
