@@ -26,22 +26,61 @@ task CreateFolders {
     New-Item $NugetPackageOutputDir -ItemType Directory -Force | Out-Null
 }
 
-# Synopsis: Compute the value of the version info of SQL Source Control. (Save it in $script:Version for other tasks to use)
-task GenerateVersionNumber {
-  # For dev builds, version suffix is always 0
-  $versionSuffix = 0
-  if($env:BUILD_NUMBER) {
-    $versionSuffix = $env:BUILD_NUMBER
-  }
+# Synopsis: Retrieve two part semantic version information and release notes from $RootDir\RELEASENOTES.md
+# $script:AssemblyVersion = Major.0.0.0
+# $script:AssemblyFileVersion = Major.Minor.$VersionSuffix.0
+# $script:NugetPackageVersion = Major.Minor.$VersionSuffix or Major.Minor.$VersionSuffix-branch
+# $script:ReleaseNotes = read from RELEASENOTES.md
+function GenerateSemVerInformationFromReleaseNotesMd([int] $VersionSuffix) {
+    $ReleaseNotesPath = "$RootDir\RELEASENOTES.md" | Resolve-Path
+    $Notes = Get-ReleaseNotes -ReleaseNotesPath $ReleaseNotesPath
+    $script:SemanticVersion = [System.Version] "$($Notes.Version).$VersionSuffix"
+    $script:ReleaseNotes = [string] $Notes.Content
 
-  $script:Version = [System.Version] "$(Get-Content version.txt).$versionSuffix"
+    # Establish assembly version number
+    $script:AssemblyVersion = [version] "$($script:SemanticVersion.Major).0.0.0"
+    $script:AssemblyFileVersion = [version] "$script:SemanticVersion.0"
 
-  TeamCity-SetBuildNumber $script:Version
+    $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:SemanticVersion -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+}
 
-  $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:Version -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+# Synopsis: Retrieve three part version information from .build\version.txt
+# $script:AssemblyVersion = Major.Minor.Build.$VersionSuffix
+# $script:AssemblyFileVersion = Major.Minor.Build.$VersionSuffix
+# $script:ReleaseNotes = ''
+# $script:NugetPackageVersion = $script:SemanticVersion or $script:SemanticVersion-branch
+function GetVersionInformationFromVersionTxt([int] $VersionSuffix) {
+    $script:AssemblyVersion = [System.Version] "$(Get-Content version.txt).$VersionSuffix"
+    $script:AssemblyFileVersion = $script:AssemblyVersion
+    $script:ReleaseNotes = ''
 
-  "Version number is $script:Version"
-  "Nuget packages Version number is $script:NugetPackageVersion"
+    $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:AssemblyVersion -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+}
+
+# Ensure the following are set
+# $script:AssemblyVersion
+# $script:AssemblyFileVersion
+# $script:ReleaseNotes
+# $script:NugetPackageVersion
+task GenerateVersionInformation {
+    "Retrieving version information"
+    
+    # For dev builds, version suffix is always 0
+    $versionSuffix = 0
+    if($env:BUILD_NUMBER) {
+        $versionSuffix = $env:BUILD_NUMBER
+    }
+  
+    throw 'TODO: Either rely on GetVersionInformationFromVersionTxt or GenerateSemVerInformationFromReleaseNotesMd - the latter is normal for libraries'
+    # GetVersionInformationFromVersionTxt($versionSuffix)
+    # GenerateSemVerInformationFromReleaseNotesMd($versionSuffix)
+    
+    TeamCity-SetBuildNumber $script:Version
+    
+    "AssemblyVersion = $script:AssemblyVersion"
+    "AssemblyFileVersion = $script:AssemblyFileVersion"
+    "NugetPackageVersion = $script:NugetPackageVersion"
+    "ReleaseNotes = $script:ReleaseNotes"
 }
 
 # Synopsis: Restore the nuget packages of the Visual Studio solution
@@ -59,30 +98,31 @@ task UpdateNugetPackages RestoreNugetPackages, {
 }
 
 # Synopsis: Update the version info in all AssemblyInfo.cs
-task UpdateVersionInfo GenerateVersionNumber, {
-
-    "Updating Version Info to $Version"
+task UpdateVersionInfo GenerateVersionInformation, {
+    "Updating assembly information"
 
     # Ignore anything under the Testing/ folder
     @(Get-ChildItem "$RootDir" AssemblyInfo.cs -Recurse) | where { $_.FullName -notlike "$RootDir\Testing\*" } | ForEach {
-
-        (Get-Content $_.FullName) `
-            -replace 'AssemblyVersion\("\d+\.\d+\.\d+\.\d+"\)', "AssemblyVersion(""$Version"")" `
-            -replace 'AssemblyFileVersion\("\d+\.\d+\.\d+\.\d+"\)', "AssemblyFileVersion(""$Version"")" `
-            | Out-File $_.FullName -Encoding utf8
+        Update-AssemblyVersion $_.FullName `
+            -Version $script:AssemblyVersion `
+            -FileVersion $script:AssemblyFileVersion `
+            -InformationalVersion $script:NuGetPackageVersion
     }
 }
 
 # Synopsis: Update the nuspec dependencies versions based on the versions of the nuget packages that are being used
 task UpdateNuspecVersionInfo {
-    # Get the list of packages.config we use from packages\repository.config
-    $packageConfigs = ([xml](Get-Content $RootDir\packages\repositories.config)).repositories.repository.path -replace '\.\.', "$RootDir"
+    # Find all the packages.config
+    $packageConfigs = Get-ChildItem "$RootDir" -Recurse -Filter "packages.config" `
+                      | ?{ $_.fullname -notmatch "\\(.build)|(packages)\\" } `
+                      | Resolve-Path
+
     # Update dependency verions in each of our .nuspec file based on what is in our packages.config
     Resolve-Path "$RootDir\Nuspec\*.nuspec" | Update-NuspecDependenciesVersions -PackagesConfigPaths $packageConfigs -verbose
 }
 
 # Synopsis: A task that makes sure our initialization tasks have been run before we can do anything useful
-task Init CreateFolders, RestoreNugetPackages, GenerateVersionNumber
+task Init CreateFolders, RestoreNugetPackages, GenerateVersionInformation
 
 # Synopsis: Compile the Visual Studio solution
 task Compile Init, UpdateVersionInfo, {
@@ -134,7 +174,16 @@ task SignAssemblies -If ($Configuration -eq 'Release' -and $SigningServiceUrl -n
 
 # Synopsis: Execute our unit tests
 task UnitTests {
-    throw 'TODO: use Invoke-NUnitForAssembly from the RedGate.Build module'
+    throw 'TODO: use Invoke-NUnitForAssembly and Merge-CoverageReports from the RedGate.Build module'
+    # For example:
+    # Invoke-NUnitForAssembly `
+    #     -AssemblyPath "$RootDir\Build\Release\RedGate.Tests.dll" `
+    #     -NUnitVersion "2.6.4" `
+    #     -FrameworkVersion "net-4.0" `
+    #     -EnableCodeCoverage $true `
+    # 
+    # Merge-CoverageReports `
+    #     -SnapshotsDir "$RootDir\Build\Release"
 }
 
 # Synopsis: Build the nuget packages.
@@ -147,6 +196,7 @@ task BuildNugetPackages Init, UpdateNuspecVersionInfo, {
                 -version $NugetPackageVersion `
                 -OutputDirectory $NugetPackageOutputDir `
                 -BasePath $RootDir `
+                -Properties "releaseNotes=$ReleaseNotes" `
                 -NoPackageAnalysis
         }
     }
