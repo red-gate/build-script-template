@@ -26,41 +26,14 @@ task CreateFolders {
     New-Item $NugetPackageOutputDir -ItemType Directory -Force | Out-Null
 }
 
-# Retrieves the first Major.Minor line in $RootDir\RELEASENOTES.md as the $Version, appends
-# all subsequent lines in the file as $Content.
-function Get-ReleaseNotes {
-    $ReleaseNotesPath = "$RootDir\RELEASENOTES.md" | Resolve-Path
-    $Lines = [System.IO.File]::ReadAllLines($ReleaseNotesPath, [System.Text.Encoding]::UTF8)
-    $Result = @()
-    $Version = $Null
-    $Lines | ForEach-Object {
-        $Line = $_.Trim()
-        if (-not $Version) {
-            $Match = [regex]::Match($Line, '[0-9]+\.[0-9]+')
-            if ($Match.Success) {
-                $Version = $Match.Value
-            }
-        }
-        if ($Version) {
-            $Result += $Line
-        }
-    }
-    if (-not $Version) {
-        throw "Failed to parse release notes: $ReleaseNotesPath"
-    }
-    return @{
-        Content = $Result -join [System.Environment]::NewLine
-        Version = [version] $Version
-    }
-}
-
 # Synopsis: Retrieve two part semantic version information and release notes from $RootDir\RELEASENOTES.md
 # $script:AssemblyVersion = Major.0.0.0
 # $script:AssemblyFileVersion = Major.Minor.$VersionSuffix.0
 # $script:NugetPackageVersion = Major.Minor.$VersionSuffix or Major.Minor.$VersionSuffix-branch
 # $script:ReleaseNotes = read from RELEASENOTES.md
 function GenerateSemVerInformationFromReleaseNotesMd([int] $VersionSuffix) {
-    $Notes = Get-ReleaseNotes
+    $ReleaseNotesPath = "$RootDir\RELEASENOTES.md" | Resolve-Path
+    $Notes = Get-ReleaseNotes -ReleaseNotesPath $ReleaseNotesPath
     $script:SemanticVersion = [System.Version] "$($Notes.Version).$VersionSuffix"
     $script:ReleaseNotes = [string] $Notes.Content
 
