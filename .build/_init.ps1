@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 # of Invoke-WebRequest decent in Teamcity
 $ProgressPreference = 'SilentlyContinue'
 
-function script:RestoreBuildLevelPackages {
+function global:RestoreBuildLevelPackages {
     # Download paket.exe.
     # Use --prefer-nuget to get it from nuget.org first as it is quicker (compressed .nupkg)
     $paketVersion = "" # Set this to the value of a specific version of paket.exe to download if need be.
