@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 # of Invoke-WebRequest decent in Teamcity
 $ProgressPreference = 'SilentlyContinue'
 
-function script:RestoreBuildLevelPackages {
+function global:RestoreBuildLevelPackages {
     # Download paket.exe.
     # Use --prefer-nuget to get it from nuget.org first as it is quicker (compressed .nupkg)
     $paketVersion = "" # Set this to the value of a specific version of paket.exe to download if need be.
@@ -61,7 +61,9 @@ function global:Build {
         [string] $NugetFeedUrl,
         # (Optional) Api Key to the nuget feed to be able to publish nuget packages.
         # Will be set by Teamcity.
-        [string] $NugetFeedApiKey
+        [string] $NugetFeedApiKey,
+        # (Optional) Signing service url used to sign dll/exe.
+        [string] $SigningServiceUrl
     )
 
     RestoreBuildLevelPackages
@@ -82,7 +84,8 @@ function global:Build {
         -BranchName $BranchName `
         -IsDefaultBranch $IsDefaultBranch `
         -NugetFeedUrl $NugetFeedUrl `
-        -NugetFeedApiKey $NugetFeedApiKey
+        -NugetFeedApiKey $NugetFeedApiKey `
+        -SigningServiceUrl $SigningServiceUrl `
     }
     finally
     {

@@ -39,7 +39,8 @@ function Setup-InstallerPrerequisites {
         -WixVersion '2' `
         -NugetPackagesDirectory "$RootDir\packages"
 
-    Copy-Item "$RootDir\Install\Wix2\*" "$BinDirectory\Release\Wix2" -Recurse -Force -Verbose
+    New-Item "$BinDirectory\Release\Wix2\" -ItemType Directory -Force | Out-Null
+    Copy-Item "$RootDir\Install\Wix2\*" "$BinDirectory\Release\Wix2\" -Recurse -Force -Verbose
 }
 
 function New-Installer($ProductName) {
@@ -83,11 +84,14 @@ function New-Installer($ProductName) {
         -PathToMiniInstallers "$BinDirectory\Installer"
 }
 
-task Installer Init, SignAssemblies, {
+task Installer Init, {
+    assert ($SigningServiceUrl) '$SigningServiceUrl is missing. Cannot create installers'
+  
+    New-Item "$RootDir\Build\Installers\Release\" -ItemType Directory -Force | Out-Null
     # Copy Release directory into a working directory for the installers
-    Copy-Item "$RootDir\Build\Release\*" "$RootDir\Build\Installers\Release" -Recurse -Force
+    Copy-Item "$RootDir\Build\Release\*" "$RootDir\Build\Installers\Release\" -Recurse -Force
     # Overwrite with any obfuscated files
-    Copy-Item "$RootDir\Build\Obfuscated\*" "$RootDir\Build\Installers\Release" -Recurse -Force
+    Copy-Item "$RootDir\Build\Obfuscated\*" "$RootDir\Build\Installers\Release\" -Recurse -Force
 
     Setup-InstallerPrerequisites
 

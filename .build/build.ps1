@@ -4,7 +4,8 @@ param(
     [string] $BranchName = 'dev',
     [bool] $IsDefaultBranch = $false,
     [string] $NugetFeedUrl,
-    [string] $NugetFeedApiKey
+    [string] $NugetFeedApiKey,
+    [string] $SigningServiceUrl
 )
 
 $RootDir = "$PsScriptRoot\.." | Resolve-Path
@@ -20,48 +21,69 @@ $Solution = 'TODO: <path to the solution file>'
 $PublishNugetPackages = $env:TEAMCITY_VERSION -and $IsDefaultBranch
 $NugetExe = "$PSScriptRoot\packages\Nuget.CommandLine\tools\Nuget.exe" | Resolve-Path
 
+# Installer building routines are stored in a separate file
+# . $PSScriptRoot\installer.tasks.ps1
+
 task CreateFolders {
     New-Item $OutputDir -ItemType Directory -Force | Out-Null
     New-Item $LogsDir -ItemType Directory -Force | Out-Null
     New-Item $NugetPackageOutputDir -ItemType Directory -Force | Out-Null
 }
 
+# Synopsis: Retrieve three part version information and release notes from $RootDir\RELEASENOTES.md
+# $script:Version = Major.Minor.Build.$VersionSuffix (for installer.tasks)
+# $script:AssemblyVersion = $script:Version
+# $script:AssemblyFileVersion = $script:Version
+# $script:ReleaseNotes = read from RELEASENOTES.md
+function GenerateVersionInformationFromReleaseNotesMd([int] $VersionSuffix) {
+    $ReleaseNotesPath = "$RootDir\RELEASENOTES.md" | Resolve-Path
+    $Notes = Get-ReleaseNotes -ReleaseNotesPath $ReleaseNotesPath -ThreePartVersion
+    $script:Version = [System.Version] "$($Notes.Version).$VersionSuffix"
+    $script:ReleaseNotes = [string] $Notes.Content
+
+    # Establish assembly version number
+    $script:AssemblyVersion = $script:Version
+    $script:AssemblyFileVersion = $script:Version
+    
+    TeamCity-PublishArtifact "$ReleaseNotesPath"
+}
+
 # Synopsis: Retrieve two part semantic version information and release notes from $RootDir\RELEASENOTES.md
+# $script:Version = Major.Minor.$VersionSuffix
 # $script:AssemblyVersion = Major.0.0.0
 # $script:AssemblyFileVersion = Major.Minor.$VersionSuffix.0
-# $script:NugetPackageVersion = Major.Minor.$VersionSuffix or Major.Minor.$VersionSuffix-branch
 # $script:ReleaseNotes = read from RELEASENOTES.md
 function GenerateSemVerInformationFromReleaseNotesMd([int] $VersionSuffix) {
     $ReleaseNotesPath = "$RootDir\RELEASENOTES.md" | Resolve-Path
     $Notes = Get-ReleaseNotes -ReleaseNotesPath $ReleaseNotesPath
-    $script:SemanticVersion = [System.Version] "$($Notes.Version).$VersionSuffix"
+    $script:Version = [System.Version] "$($Notes.Version).$VersionSuffix"
     $script:ReleaseNotes = [string] $Notes.Content
 
     # Establish assembly version number
-    $script:AssemblyVersion = [version] "$($script:SemanticVersion.Major).0.0.0"
-    $script:AssemblyFileVersion = [version] "$script:SemanticVersion.0"
-
-    $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:SemanticVersion -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+    $script:AssemblyVersion = [version] "$($script:Version.Major).0.0.0"
+    $script:AssemblyFileVersion = [version] "$script:Version.0"
+    
+    TeamCity-PublishArtifact "$ReleaseNotesPath"
 }
 
 # Synopsis: Retrieve three part version information from .build\version.txt
+# $script:Version = Major.Minor.Build.$VersionSuffix
 # $script:AssemblyVersion = Major.Minor.Build.$VersionSuffix
 # $script:AssemblyFileVersion = Major.Minor.Build.$VersionSuffix
 # $script:ReleaseNotes = ''
-# $script:NugetPackageVersion = $script:SemanticVersion or $script:SemanticVersion-branch
 function GetVersionInformationFromVersionTxt([int] $VersionSuffix) {
-    $script:AssemblyVersion = [System.Version] "$(Get-Content version.txt).$VersionSuffix"
-    $script:AssemblyFileVersion = $script:AssemblyVersion
+    $script:Version = [System.Version] "$(Get-Content version.txt).$VersionSuffix"
+    $script:AssemblyVersion = $script:Version
+    $script:AssemblyFileVersion = $script:Version
     $script:ReleaseNotes = ''
-
-    $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:AssemblyVersion -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
 }
 
-# Ensure the following are set
+# Ensures the following are set
+# $script:Version
 # $script:AssemblyVersion
 # $script:AssemblyFileVersion
 # $script:ReleaseNotes
-# $script:NugetPackageVersion
+# $script:NugetPackageVersion = $script:Version or $script:Version-branch
 task GenerateVersionInformation {
     "Retrieving version information"
     
@@ -71,12 +93,16 @@ task GenerateVersionInformation {
         $versionSuffix = $env:BUILD_NUMBER
     }
   
-    throw 'TODO: Either rely on GetVersionInformationFromVersionTxt or GenerateSemVerInformationFromReleaseNotesMd - the latter is normal for libraries'
+    throw 'TODO: Either rely on GetVersionInformationFromVersionTxt, GenerateVersionInformationFromReleaseNotesMd, or GenerateSemVerInformationFromReleaseNotesMd - the latter is normal for libraries'
     # GetVersionInformationFromVersionTxt($versionSuffix)
+    # GenerateVersionInformationFromReleaseNotesMd($versionSuffix)
     # GenerateSemVerInformationFromReleaseNotesMd($versionSuffix)
     
     TeamCity-SetBuildNumber $script:Version
     
+    $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:Version -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+    
+    "Version = $script:Version"
     "AssemblyVersion = $script:AssemblyVersion"
     "AssemblyFileVersion = $script:AssemblyFileVersion"
     "NugetPackageVersion = $script:NugetPackageVersion"
@@ -160,7 +186,7 @@ task SmartAssembly -If ($Configuration -eq 'Release') {
 }
 
 # Synopsis: Sign all the RedGate assemblies (Release and Obfuscated)
-task SignAssemblies -If ($Configuration -eq 'Release' -and $SigningServiceUrl -ne $null) {
+task SignAssemblies -If ($Configuration -eq 'Release' -and $SigningServiceUrl) {
     throw 'TODO: use Invoke-SigningService from the RedGate.Build module'
     # For example:
     # Get-Item -Path "$RootDir\Build\Release\*.*" `
@@ -190,23 +216,27 @@ task UnitTests {
 task BuildNugetPackages Init, UpdateNuspecVersionInfo, {
     New-Item $NugetPackageOutputDir -ItemType Directory -Force | Out-Null
 
+    $escaped=$ReleaseNotes.Replace('"','\"')
+    $properties = "releaseNotes=$escaped"
+    
     "$RootDir\Nuspec\*.nuspec" | Resolve-Path | ForEach {
         exec {
             & $NugetExe pack $_ `
-                -version $NugetPackageVersion `
+                -Version $NugetPackageVersion `
                 -OutputDirectory $NugetPackageOutputDir `
                 -BasePath $RootDir `
-                -Properties "releaseNotes=$ReleaseNotes" `
+                -Properties $properties `
                 -NoPackageAnalysis
         }
     }
+    
     TeamCity-PublishArtifact "$NugetPackageOutputDir\*.nupkg => NugetPackages"
 }
 
 # Synopsis: Publish the nuget packages (Teamcity only)
 task PublishNugetPackages -If($PublishNugetPackages) {
-  assert ($NugetFeedUrl -ne $null) '$NugetFeedUrl is missing. Cannot publish nuget packages'
-  assert ($NugetFeedApiKey -ne $null) '$NugetFeedApiKey is missing. Cannot publish nuget packages'
+  assert ($NugetFeedUrl) '$NugetFeedUrl is missing. Cannot publish nuget packages'
+  assert ($NugetFeedApiKey) '$NugetFeedApiKey is missing. Cannot publish nuget packages'
 
   Get-ChildItem $NugetPackageOutputDir -Filter "*.nupkg" | ForEach {
     & $NugetExe push $_.FullName -Source $NugetFeedUrl -ApiKey $NugetFeedApiKey
@@ -214,7 +244,7 @@ task PublishNugetPackages -If($PublishNugetPackages) {
 }
 
 # Synopsis: Build the project.
-task Build Init, Compile, SmartAssembly, SignAssemblies, BuildNugetPackages, UnitTests, PublishNugetPackages
+task Build Init, Compile, UnitTests, SmartAssembly, SignAssemblies, BuildNugetPackages, PublishNugetPackages
 
 # Synopsis: By default, Call the 'Build' task
 task . Build
