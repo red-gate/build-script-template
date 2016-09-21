@@ -57,7 +57,7 @@ yo
   * We can choose to commit this file or not.
     * If it is committed, paket dependencies will not change when calling `paket install`. What is defined in `paket.lock` is what gets installed.
     * If it is not committed, each call to `paket install` may download new versions based on the versions set in `paket.dependencies`
-* [.build\\version.txt](.build/version.txt)
+* [.build\\version.txt](.build/version.txt) (also see [RELEASENOTES.md](#RELEASENOTES.md))
   * Contain the version number.
     * Could be *'major.minor'* (build script could add a 3rd dynamic number if need be)
     * Could be *'major.minor.patch'* (build script could add a 4th dynamic number if need be)
@@ -76,3 +76,9 @@ yo
   * nuget.org
   * our own internal feed
   * our own internal teamcity feed
+
+### RELEASENOTES.md
+* [RELEASENOTES.md](RELEASENOTES.md)
+  * Contains the full parseable release notes which can be used instead of version.txt to supply the version number of the build in addition to providing release notes for nuget package and more.
+    * Could be *'major.minor'* (build script could add a 3rd (and 4th) dynamic number if need be)
+    * Could be *'major.minor.patch'* (build script could add a 4th dynamic number if need be)
