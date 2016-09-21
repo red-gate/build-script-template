@@ -150,10 +150,10 @@ task UpdateNuspecVersionInfo {
 }
 
 # Synopsis: A task that makes sure our initialization tasks have been run before we can do anything useful
-task Init CreateFolders, GenerateVersionInformation
+task Init CreateFolders, RestoreNugetPackages, GenerateVersionInformation
 
 # Synopsis: Compile the Visual Studio solution
-task Compile Init, RestoreNugetPackages, UpdateVersionInfo, {
+task Compile Init, UpdateVersionInfo, {
     try {
         exec {
             & "C:\Program Files (x86)\MSBuild\14.0\Bin\msbuild" `
