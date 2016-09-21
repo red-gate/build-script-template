@@ -44,8 +44,6 @@ function GenerateVersionInformationFromReleaseNotesMd([int] $VersionSuffix) {
     # Establish assembly version number
     $script:AssemblyVersion = $script:Version
     $script:AssemblyFileVersion = $script:Version
-
-    $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:Version -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
     
     TeamCity-PublishArtifact "$ReleaseNotesPath"
 }
