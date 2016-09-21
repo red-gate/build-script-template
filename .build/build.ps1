@@ -232,8 +232,8 @@ task BuildNugetPackages Init, UpdateNuspecVersionInfo, {
 
 # Synopsis: Publish the nuget packages (Teamcity only)
 task PublishNugetPackages -If($PublishNugetPackages) {
-  assert ($NugetFeedUrl -ne $null) '$NugetFeedUrl is missing. Cannot publish nuget packages'
-  assert ($NugetFeedApiKey -ne $null) '$NugetFeedApiKey is missing. Cannot publish nuget packages'
+  assert ($NugetFeedUrl) '$NugetFeedUrl is missing. Cannot publish nuget packages'
+  assert ($NugetFeedApiKey) '$NugetFeedApiKey is missing. Cannot publish nuget packages'
 
   Get-ChildItem $NugetPackageOutputDir -Filter "*.nupkg" | ForEach {
     & $NugetExe push $_.FullName -Source $NugetFeedUrl -ApiKey $NugetFeedApiKey
