@@ -57,7 +57,7 @@ yo
   * We can choose to commit this file or not.
     * If it is committed, paket dependencies will not change when calling `paket install`. What is defined in `paket.lock` is what gets installed.
     * If it is not committed, each call to `paket install` may download new versions based on the versions set in `paket.dependencies`
-* [.build\\version.txt](.build/version.txt) (also see [RELEASENOTES.md](#RELEASENOTES.md))
+* [.build\\version.txt](.build/version.txt) (also see [RELEASENOTES.md](#releasenotesmd))
   * Contain the version number.
     * Could be *'major.minor'* (build script could add a 3rd dynamic number if need be)
     * Could be *'major.minor.patch'* (build script could add a 4th dynamic number if need be)
