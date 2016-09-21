@@ -61,7 +61,9 @@ function global:Build {
         [string] $NugetFeedUrl,
         # (Optional) Api Key to the nuget feed to be able to publish nuget packages.
         # Will be set by Teamcity.
-        [string] $NugetFeedApiKey
+        [string] $NugetFeedApiKey,
+        # (Optional) Signing service url used to sign dll/exe.
+        [string] $SigningServiceUrl
     )
 
     RestoreBuildLevelPackages
@@ -82,7 +84,8 @@ function global:Build {
         -BranchName $BranchName `
         -IsDefaultBranch $IsDefaultBranch `
         -NugetFeedUrl $NugetFeedUrl `
-        -NugetFeedApiKey $NugetFeedApiKey
+        -NugetFeedApiKey $NugetFeedApiKey `
+        -SigningServiceUrl $SigningServiceUrl `
     }
     finally
     {

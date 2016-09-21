@@ -4,7 +4,8 @@ param(
     [string] $BranchName = 'dev',
     [bool] $IsDefaultBranch = $false,
     [string] $NugetFeedUrl,
-    [string] $NugetFeedApiKey
+    [string] $NugetFeedApiKey,
+    [string] $SigningServiceUrl
 )
 
 $RootDir = "$PsScriptRoot\.." | Resolve-Path
@@ -45,6 +46,8 @@ function GenerateVersionInformationFromReleaseNotesMd([int] $VersionSuffix) {
     $script:AssemblyFileVersion = $script:Version
 
     $script:NugetPackageVersion = New-NugetPackageVersion -Version $script:Version -BranchName $BranchName -IsDefaultBranch $IsDefaultBranch
+    
+    TeamCity-PublishArtifact "$ReleaseNotesPath"
 }
 
 # Synopsis: Retrieve two part semantic version information and release notes from $RootDir\RELEASENOTES.md
@@ -61,6 +64,8 @@ function GenerateSemVerInformationFromReleaseNotesMd([int] $VersionSuffix) {
     # Establish assembly version number
     $script:AssemblyVersion = [version] "$($script:Version.Major).0.0.0"
     $script:AssemblyFileVersion = [version] "$script:Version.0"
+    
+    TeamCity-PublishArtifact "$ReleaseNotesPath"
 }
 
 # Synopsis: Retrieve three part version information from .build\version.txt
@@ -183,7 +188,7 @@ task SmartAssembly -If ($Configuration -eq 'Release') {
 }
 
 # Synopsis: Sign all the RedGate assemblies (Release and Obfuscated)
-task SignAssemblies -If ($Configuration -eq 'Release' -and $SigningServiceUrl -ne $null) {
+task SignAssemblies -If ($Configuration -eq 'Release' -and $SigningServiceUrl) {
     throw 'TODO: use Invoke-SigningService from the RedGate.Build module'
     # For example:
     # Get-Item -Path "$RootDir\Build\Release\*.*" `
