@@ -213,16 +213,20 @@ task UnitTests {
 task BuildNugetPackages Init, UpdateNuspecVersionInfo, {
     New-Item $NugetPackageOutputDir -ItemType Directory -Force | Out-Null
 
+    $escaped=$ReleaseNotes.Replace('"','\"')
+    $properties = "releaseNotes=$escaped"
+    
     "$RootDir\Nuspec\*.nuspec" | Resolve-Path | ForEach {
         exec {
             & $NugetExe pack $_ `
-                -version $NugetPackageVersion `
+                -Version $NugetPackageVersion `
                 -OutputDirectory $NugetPackageOutputDir `
                 -BasePath $RootDir `
-                -Properties "releaseNotes=$ReleaseNotes" `
+                -Properties $properties `
                 -NoPackageAnalysis
         }
     }
+    
     TeamCity-PublishArtifact "$NugetPackageOutputDir\*.nupkg => NugetPackages"
 }
 
