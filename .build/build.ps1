@@ -37,7 +37,7 @@ task CreateFolders {
 # $script:ReleaseNotes = read from RELEASENOTES.md
 function GenerateVersionInformationFromReleaseNotesMd([int] $VersionSuffix) {
     $ReleaseNotesPath = "$RootDir\RELEASENOTES.md" | Resolve-Path
-    $Notes = Get-ReleaseNotes -ReleaseNotesPath $ReleaseNotesPath -ThreePartVersion
+    $Notes = Read-ReleaseNotes -ReleaseNotesPath $ReleaseNotesPath -ThreePartVersion
     $script:Version = [System.Version] "$($Notes.Version).$VersionSuffix"
     $script:ReleaseNotes = [string] $Notes.Content
 
@@ -55,7 +55,7 @@ function GenerateVersionInformationFromReleaseNotesMd([int] $VersionSuffix) {
 # $script:ReleaseNotes = read from RELEASENOTES.md
 function GenerateSemVerInformationFromReleaseNotesMd([int] $VersionSuffix) {
     $ReleaseNotesPath = "$RootDir\RELEASENOTES.md" | Resolve-Path
-    $Notes = Get-ReleaseNotes -ReleaseNotesPath $ReleaseNotesPath
+    $Notes = Read-ReleaseNotes -ReleaseNotesPath $ReleaseNotesPath
     $script:Version = [System.Version] "$($Notes.Version).$VersionSuffix"
     $script:ReleaseNotes = [string] $Notes.Content
 
