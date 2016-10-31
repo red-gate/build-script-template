@@ -27,7 +27,15 @@ param(
     TeamCity-PublishArtifact "$NugetPackageOutputDir\*.nupkg"
 }
 
-function Setup-InstallerPrerequisites {
+task Copy-InstallerFiles {
+    New-Item "$RootDir\Build\Installers\Release\" -ItemType Directory -Force | Out-Null
+    # Copy Release directory into a working directory for the installers
+    Copy-Item "$RootDir\Build\Release\*" "$RootDir\Build\Installers\Release\" -Recurse -Force
+    # Overwrite with any obfuscated files
+    Copy-Item "$RootDir\Build\Obfuscated\*" "$RootDir\Build\Installers\Release\" -Recurse -Force
+}
+
+task Setup-InstallerPrerequisites {
 
     $BinDirectory = "$RootDir\Build\Installers"
     
@@ -84,17 +92,9 @@ function New-Installer($ProductName) {
         -PathToMiniInstallers "$BinDirectory\Installer"
 }
 
-task Installer Init, {
+task Installer Copy-InstallerFiles, Init, Setup-InstallerPrerequisites, {
     assert ($SigningServiceUrl) '$SigningServiceUrl is missing. Cannot create installers'
   
-    New-Item "$RootDir\Build\Installers\Release\" -ItemType Directory -Force | Out-Null
-    # Copy Release directory into a working directory for the installers
-    Copy-Item "$RootDir\Build\Release\*" "$RootDir\Build\Installers\Release\" -Recurse -Force
-    # Overwrite with any obfuscated files
-    Copy-Item "$RootDir\Build\Obfuscated\*" "$RootDir\Build\Installers\Release\" -Recurse -Force
-
-    Setup-InstallerPrerequisites
-
     throw 'You probably want to ensure New-Installer is called here'
     # For example:
     # New-Installer -ProductName 'SQL Dependency Tracker'
