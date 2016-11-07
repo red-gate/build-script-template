@@ -243,8 +243,12 @@ task PublishNugetPackages -If($PublishNugetPackages) {
   }
 }
 
+task BuildArtifacts {
+  TeamCity-PublishArtifact "$RootDir\Build\** => Build.zip"
+}
+
 # Synopsis: Build the project.
-task Build Init, Compile, UnitTests, SmartAssembly, SignAssemblies, BuildNugetPackages, PublishNugetPackages
+task Build Init, Compile, UnitTests, SmartAssembly, SignAssemblies, BuildArtifacts, BuildNugetPackages, PublishNugetPackages
 
 # Synopsis: By default, Call the 'Build' task
 task . Build
