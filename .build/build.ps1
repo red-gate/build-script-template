@@ -173,15 +173,14 @@ task Compile Init, UpdateVersionInfo, {
 
 # Synopsis: Run SmartAssembly on files that have saproj files for them
 task SmartAssembly -If ($Configuration -eq 'Release') {
-    throw 'TODO: use Invoke-SmartAssembly from the RedGate.Build module'
+    throw 'TODO: SmartAssembly files if using SmartAssembly'
     # For example:
     # Get-Item "$RootDir\MSBuild\sa\*.saproj" | ForEach {
     #     $saInput = "$RootDir\Build\Release\$($_.BaseName)" | Resolve-Path
     #     $saOutput = "$RootDir\Build\Obfuscated\$($_.BaseName)"
-    #     Invoke-SmartAssembly `
-    #         -ProjectPath $_.FullName `
-    #         -InputFilename $saInput `
-    #         -OutputFilename $saOutput
+    #    exec {
+    #        .\packages\SmartAssembly\tools\SmartAssembly.com /build $_.FullName /input=$saInput /output=$saOutput
+    #    }
     # }
 }
 
