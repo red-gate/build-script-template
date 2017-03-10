@@ -5,7 +5,8 @@ param(
     [bool] $IsDefaultBranch = $false,
     [string] $NugetFeedUrl,
     [string] $NugetFeedApiKey,
-    [string] $SigningServiceUrl
+    [string] $SigningServiceUrl,
+    [string] $GithubAPIToken
 )
 
 $RootDir = "$PsScriptRoot\.." | Resolve-Path
@@ -20,6 +21,7 @@ $Solution = 'TODO: <path to the solution file>'
 # or http://<teamcity-server>/httpAuth/app/nuget/v1/FeedService.svc/
 $PublishNugetPackages = $env:TEAMCITY_VERSION -and $IsDefaultBranch
 $NugetExe = "$PSScriptRoot\packages\Nuget.CommandLine\tools\Nuget.exe" | Resolve-Path
+$Repo = "TODO: Github Repo Name"
 
 # Installer building routines are stored in a separate file
 # . $PSScriptRoot\installer.tasks.ps1
@@ -244,6 +246,20 @@ task PublishNugetPackages -If($PublishNugetPackages) {
 
 task BuildArtifacts {
   TeamCity-PublishArtifact "$RootDir\Build\** => Build.zip"
+}
+
+#Synopsis: Update the RedGate Nuget Packages
+task UpdateRedgateNugetPackages RestoreNugetPackages, {
+    assert $GithubAPIToken "GithubAPIToken has not been set!"
+
+    # skip RedGate.CodeHygiene since it brings in NUnit 3
+    Update-RedgateNugetPackages -Repo $Repo `
+        -GithubAPIToken $GithubAPIToken `
+        -RootDir $RootDir `
+        -Solution $Solution `
+        -Assignees  @('TODO', 'TODO') `
+        -Labels @('TODO', 'TODO') `
+        -ExcludedPackages  @('TODO', 'TODO') `
 }
 
 # Synopsis: Build the project.
