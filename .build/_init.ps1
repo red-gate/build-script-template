@@ -63,7 +63,9 @@ function global:Build {
         # Will be set by Teamcity.
         [string] $NugetFeedApiKey,
         # (Optional) Signing service url used to sign dll/exe.
-        [string] $SigningServiceUrl
+        [string] $SigningServiceUrl,
+        # (Optional) A GitHub API Access token used for Pushing and PRs
+        [string] $GithubAPIToken
     )
 
     RestoreBuildLevelPackages
@@ -86,6 +88,7 @@ function global:Build {
         -NugetFeedUrl $NugetFeedUrl `
         -NugetFeedApiKey $NugetFeedApiKey `
         -SigningServiceUrl $SigningServiceUrl `
+        -GithubAPIToken $GithubAPIToken `
     }
     finally
     {
@@ -95,5 +98,6 @@ function global:Build {
 
 Write-Host "This is the <amazing-product> repo. And here are the available commands:" -Fore Magenta
 Write-Host "`t build" -Fore Green
+Write-Host "`t build UpdateRedgateNugetPackages" -Fore Green
 Write-Host "`t installer" -Fore Green
 Write-Host "For more info, use help <command-name>" -Fore Magenta
