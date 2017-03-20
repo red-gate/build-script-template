@@ -7,7 +7,7 @@ nuget Nuget.CommandLine ~> 3.4.0
 
 # https://github.com/nightroman/Invoke-Build
 # https://github.com/nightroman/Invoke-Build/wiki/Script-Tutorial
-nuget Invoke-Build ~> 2.14.7
+nuget Invoke-Build ~> 3
 
 # Contains useful helper functions for powershell build scripts
 nuget RedGate.Build ~> 0.1.207
