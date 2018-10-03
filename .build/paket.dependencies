@@ -13,5 +13,3 @@ nuget RedGate.Build ~> 0.1
 
 # Contains useful helper functions to build installers
 nuget RedGate.Build.Installer ~> 1
-
-# nuget SmartAssembly <version> # if using SmartAssembly

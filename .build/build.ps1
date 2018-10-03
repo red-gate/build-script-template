@@ -170,19 +170,6 @@ task Compile Init, UpdateVersionInfo, {
     }
 }
 
-# Synopsis: Run SmartAssembly on files that have saproj files for them
-task SmartAssembly -If ($Configuration -eq 'Release') {
-    throw 'TODO: SmartAssembly files if using SmartAssembly'
-    # For example:
-    # Get-Item "$RootDir\MSBuild\sa\*.saproj" | ForEach {
-    #     $saInput = "$RootDir\Build\Release\$($_.BaseName)" | Resolve-Path
-    #     $saOutput = "$RootDir\Build\Obfuscated\$($_.BaseName)"
-    #    exec {
-    #        .\packages\SmartAssembly\tools\SmartAssembly.com /build $_.FullName /input=$saInput /output=$saOutput
-    #    }
-    # }
-}
-
 # Synopsis: Sign all the RedGate assemblies (Release and Obfuscated)
 task SignAssemblies -If ($Configuration -eq 'Release' -and $SigningServiceUrl) {
     throw 'TODO: use Invoke-SigningService from the RedGate.Build module'
@@ -260,7 +247,7 @@ task UpdateRedgateNugetPackages RestoreNugetPackages, {
 }
 
 # Synopsis: Build the project.
-task Build Init, Compile, UnitTests, SmartAssembly, SignAssemblies, BuildArtifacts, BuildNugetPackages, PublishNugetPackages
+task Build Init, Compile, UnitTests, SignAssemblies, BuildArtifacts, BuildNugetPackages, PublishNugetPackages
 
 # Synopsis: By default, Call the 'Build' task
 task . Build
