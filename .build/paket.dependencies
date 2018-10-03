@@ -1,6 +1,5 @@
 source https://nuget.org/api/v2
 source http://TODO:_internal_nuget_server_hostname/api/v2
-source http://TODO:teamcity_server_hostname/guestAuth/app/nuget/v1/FeedService.svc/
 
 # You'll probably need nuget.exe in order to `nuget restore`, `nuget pack` and `nuget push`
 nuget Nuget.CommandLine ~> 3

@@ -16,9 +16,6 @@ $NugetPackageOutputDir = "$OutputDir\nugetpackages"
 $Solution = 'TODO: <path to the solution file>'
 # We probably don't want to publish every single nuget package ever built to our external feed.
 # Let's only publish packages built from the default branch (master) by default.
-# packages built from non master branches would still be available using the built-in Teamcity feed at
-# http://<teamcity-server>/guestAuth/app/nuget/v1/FeedService.svc/
-# or http://<teamcity-server>/httpAuth/app/nuget/v1/FeedService.svc/
 $PublishNugetPackages = $env:TEAMCITY_VERSION -and $IsDefaultBranch
 $NugetExe = "$PSScriptRoot\packages\Nuget.CommandLine\tools\Nuget.exe" | Resolve-Path
 $Repo = "TODO: Github Repo Name"
