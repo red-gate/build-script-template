@@ -44,11 +44,11 @@ task Setup-InstallerPrerequisites {
     Initialize-InstallerPrerequisites `
         -BuildDirectory $BinDirectory `
         -Branding 'SQL Toolbelt' `
-        -WixVersion '2' `
+        -WixVersion '3' `
         -NugetPackagesDirectory "$RootDir\packages"
 
-    New-Item "$BinDirectory\Release\Wix2\" -ItemType Directory -Force | Out-Null
-    Copy-Item "$RootDir\Install\Wix2\*" "$BinDirectory\Release\Wix2\" -Recurse -Force -Verbose
+    New-Item "$BinDirectory\Release\Wix3\" -ItemType Directory -Force | Out-Null
+    Copy-Item "$RootDir\Install\Wix3\*" "$BinDirectory\Release\Wix3\" -Recurse -Force -Verbose
 }
 
 function New-Installer($ProductName) {
